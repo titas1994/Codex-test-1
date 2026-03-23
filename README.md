@@ -4,7 +4,7 @@ A simple web app to generate YouTube thumbnails with AI. It supports uploading y
 
 ## Features
 
-- Generate an AI thumbnail background from your video topic.
+- Generate an AI thumbnail background from your video topic (with automatic local fallback if API is busy).
 - Upload your own image and preview it instantly.
 - Auto-compose the final thumbnail with:
   - AI background,
@@ -61,3 +61,4 @@ This repo already includes both `netlify.toml` and `_redirects` for SPA/static f
 
 - The app uses a free public image generation endpoint (`image.pollinations.ai`) for easy testing.
 - Public API speed/quality can vary depending on current traffic.
+- If the AI endpoint is unavailable, the app creates a local template thumbnail so users still get output.
