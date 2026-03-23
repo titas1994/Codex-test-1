@@ -7,96 +7,67 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="panel controls">
-        <h1>🚀 AI Thumbnail Studio</h1>
-        <p class="muted">No login required • Session-based workspace</p>
+    <main class="layout">
+      <section class="card form-card">
+        <h1>AI Thumbnail Studio</h1>
+        <p>Generate production-ready thumbnail concepts using a real AI backend. No login required.</p>
 
-        <label>Prompt input
-          <input id="promptInput" type="text" placeholder="viral tech thumbnail" />
+        <label>
+          Thumbnail goal
+          <input id="promptInput" type="text" placeholder="Example: Beginner to pro Claude AI tutorial" />
         </label>
 
-        <div class="grid-2">
-          <label>Style preset
+        <div class="row">
+          <label>
+            Style
             <select id="stylePreset">
-              <option value="youtube">YouTube</option>
-              <option value="gaming">Gaming</option>
-              <option value="cinematic">Cinematic</option>
-              <option value="minimal">Minimal</option>
+              <option value="high contrast YouTube thumbnail">YouTube High CTR</option>
+              <option value="cinematic dramatic lighting">Cinematic</option>
+              <option value="gaming neon style">Gaming</option>
+              <option value="clean modern minimal">Minimal</option>
             </select>
           </label>
-          <label>Platform size
+
+          <label>
+            Platform
             <select id="platformSize">
-              <option value="youtube">YouTube 1280×720</option>
-              <option value="youtube_shorts">YouTube Shorts 1080×1920</option>
-              <option value="instagram">Instagram/Reels 1080×1350</option>
-              <option value="tiktok">TikTok 1080×1920</option>
+              <option value="1280x720">YouTube (1280×720)</option>
+              <option value="1080x1920">YouTube Shorts / TikTok (1080×1920)</option>
+              <option value="1080x1350">Instagram (1080×1350)</option>
             </select>
           </label>
         </div>
 
-        <div class="grid-2">
-          <label>Upload image
-            <input id="uploadImage" type="file" accept="image/*" />
+        <div class="row">
+          <label>
+            Variations
+            <select id="variationCount">
+              <option>1</option><option>2</option><option selected>3</option><option>4</option>
+            </select>
           </label>
-          <label>Reference image
-            <input id="referenceImage" type="file" accept="image/*" />
+          <label>
+            Export
+            <select id="exportFormat">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPG</option>
+              <option value="webp">WebP</option>
+            </select>
           </label>
         </div>
 
-        <div class="grid-2">
-          <label>Upload video
-            <input id="videoInput" type="file" accept="video/*" />
-          </label>
-          <label>YouTube link (optional)
-            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..." />
-          </label>
-        </div>
-
-        <label>Variations (4–10)
-          <input id="variationCount" type="range" min="4" max="10" value="4" />
-          <span id="variationValue">4</span>
-        </label>
-
-        <h3>Smart Editor</h3>
-        <div class="grid-2">
-          <label>Text size <input id="textSize" type="range" min="42" max="140" value="84" /></label>
-          <label>Contrast <input id="contrast" type="range" min="0.8" max="1.8" step="0.1" value="1.2" /></label>
-          <label>Stroke <input id="stroke" type="range" min="2" max="18" value="8" /></label>
-          <label>Shadow <input id="shadow" type="range" min="0" max="35" value="16" /></label>
-        </div>
-
-        <div class="assist-row">
-          <button type="button" class="ghost" id="btnViral">Make it more viral</button>
-          <button type="button" class="ghost" id="btnReadable">Improve readability</button>
-          <button type="button" class="ghost" id="btnContrast">Boost contrast</button>
-        </div>
-
-        <div class="action-row">
-          <button id="generateBtn" type="button">Generate thumbnails</button>
-          <button id="downloadAllBtn" type="button" class="ghost">Download all</button>
-        </div>
+        <button id="generateBtn" type="button">Generate thumbnails</button>
+        <p id="status" class="status">Ready.</p>
       </section>
 
-      <section class="panel output">
-        <h2>🎯 CTR Optimization</h2>
-        <p id="scoreText">Click potential: --%</p>
-        <ul id="hookList"></ul>
-        <p id="improveText" class="muted"></p>
-
-        <h2>🔁 A/B Variations</h2>
-        <div id="gallery" class="gallery"></div>
-
-        <div class="action-row">
-          <select id="exportFormat">
-            <option value="png">PNG</option>
-            <option value="jpeg">JPG</option>
-            <option value="webp">WebP</option>
-          </select>
-          <button id="downloadSelectedBtn" type="button">Download selected</button>
+      <section class="card output-card">
+        <div class="toolbar">
+          <h2>Generated Variations</h2>
+          <div>
+            <button id="downloadSelectedBtn" type="button" class="secondary">Download selected</button>
+            <button id="downloadAllBtn" type="button" class="secondary">Download all</button>
+          </div>
         </div>
-
-        <p id="status" class="muted">Ready.</p>
+        <div id="gallery" class="gallery"></div>
       </section>
     </main>
 
