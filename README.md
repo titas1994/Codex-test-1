@@ -1,13 +1,17 @@
 # AI YouTube Thumbnail Generator
 
-A simple web app to generate YouTube thumbnails with AI. It also supports uploading your own image and gives both input and output preview areas.
+A simple web app to generate YouTube thumbnails with AI. It supports uploading your own image, previewing that input, and previewing/downloading the final thumbnail.
 
 ## Features
 
-- AI thumbnail generation from your video topic.
-- Optional image upload with instant input preview.
-- Output image preview and one-click download.
-- Clean, beginner-friendly UI.
+- Generate an AI thumbnail background from your video topic.
+- Upload your own image and preview it instantly.
+- Auto-compose the final thumbnail with:
+  - AI background,
+  - large headline text,
+  - optional uploaded creator image.
+- Preview and download the final image.
+- Clean and beginner-friendly UI.
 
 ## Run locally
 
@@ -17,34 +21,43 @@ Because this is a static app, you can serve it with any static server:
 python3 -m http.server 8080
 ```
 
-Then open:
+Open:
 
 - http://localhost:8080
 
-## Deploy on Netlify (for testing and live)
+## Deploy on Netlify (testing + live)
 
 ### Option 1: Drag-and-drop deploy (fastest)
 
 1. Zip this project folder.
-2. Go to **Netlify > Sites**.
-3. Drag the zip into Netlify deploy area.
-4. Netlify will publish a live URL in seconds.
+2. In Netlify, go to **Sites**.
+3. Drag your zip into the deploy area.
+4. Wait for deploy to finish and open the generated URL.
 
-### Option 2: Connect GitHub repo (recommended)
+### Option 2: GitHub import (recommended)
 
-1. Push this code to a GitHub repository.
-2. In Netlify, click **Add new site > Import an existing project**.
-3. Select GitHub and choose your repo.
-4. Use these build settings:
+1. Push this code to a GitHub repo.
+2. In Netlify, click **Add new site → Import an existing project**.
+3. Choose your repository.
+4. Set:
+   - **Base directory:** *(leave empty)*
    - **Build command:** *(leave empty)*
    - **Publish directory:** `.`
-5. Click **Deploy site**.
+5. Deploy.
 
-## Make it production-ready later
+## If you see “Page not found” on Netlify
 
-If you need stronger quality and brand-consistent designs, replace the free image API with your own provider key through a backend function.
+Use this checklist:
+
+1. Confirm deploy completed successfully in Netlify logs.
+2. Confirm **Publish directory** is exactly `.`.
+3. Confirm `index.html` is in the project root.
+4. Re-deploy with **Clear cache and deploy site**.
+5. Open the site root URL (for example, `https://your-site.netlify.app/`) instead of a subpath.
+
+This repo already includes both `netlify.toml` and `_redirects` for SPA/static fallback routing.
 
 ## Notes
 
-- The app currently uses a free public image generation endpoint (`image.pollinations.ai`) for easy testing.
-- Generation speed and quality may vary depending on public API load.
+- The app uses a free public image generation endpoint (`image.pollinations.ai`) for easy testing.
+- Public API speed/quality can vary depending on current traffic.
