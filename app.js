@@ -127,59 +127,92 @@ async function generateStudioThumbnail(topic, ratioKey, creatorImageUrl, referen
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#0d1222';
-  ctx.fillRect(0, 0, width, height);
-
+  // Base background layer (prefer reference image when available).
   if (referenceImageUrl) {
     const refImage = await loadImage(referenceImageUrl);
-    ctx.filter = 'blur(4px)';
+    ctx.filter = 'blur(10px) saturate(1.2)';
     ctx.drawImage(refImage, 0, 0, width, height);
     ctx.filter = 'none';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.44)';
+
+    // Bring back some detail so it looks premium, not flat.
+    ctx.globalAlpha = 0.35;
+    ctx.drawImage(refImage, 0, 0, width, height);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = 'rgba(8, 10, 20, 0.42)';
     ctx.fillRect(0, 0, width, height);
   } else {
     const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, '#2f2f45');
-    grad.addColorStop(1, '#151521');
+    grad.addColorStop(0, '#1f2948');
+    grad.addColorStop(0.55, '#1f1444');
+    grad.addColorStop(1, '#0c0f1e');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, width, height);
   }
 
-  const mainWord = pickMainWord(topic);
-  ctx.fillStyle = '#ff1f44';
-  ctx.font = `900 ${Math.round(width * 0.18)}px Inter, Arial, sans-serif`;
-  ctx.fillText(mainWord, Math.round(width * 0.06), Math.round(height * 0.18));
+  const headlineWord = pickMainWord(topic);
+  ctx.fillStyle = '#ff244d';
+  ctx.font = `900 ${Math.round(width * 0.14)}px Inter, Arial, sans-serif`;
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 14;
+  ctx.fillText(headlineWord, Math.round(width * 0.06), Math.round(height * 0.2));
+  ctx.shadowBlur = 0;
 
-  if (creatorImageUrl) {
-    const creator = await loadImage(creatorImageUrl);
-    const frameW = ratioKey === 'youtube' ? Math.round(width * 0.44) : Math.round(width * 0.78);
-    const frameH = ratioKey === 'youtube' ? Math.round(height * 0.78) : Math.round(height * 0.5);
-    const frameX = ratioKey === 'youtube' ? Math.round(width * 0.29) : Math.round(width * 0.11);
-    const frameY = ratioKey === 'youtube' ? Math.round(height * 0.16) : Math.round(height * 0.26);
+  const subjectSource = creatorImageUrl || referenceImageUrl;
+  if (subjectSource) {
+    const subject = await loadImage(subjectSource);
 
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 30;
-    ctx.drawImage(creator, frameX, frameY, frameW, frameH);
-    ctx.shadowBlur = 0;
+    const boxW = ratioKey === 'youtube' ? Math.round(width * 0.4) : Math.round(width * 0.74);
+    const boxH = ratioKey === 'youtube' ? Math.round(height * 0.74) : Math.round(height * 0.5);
+    const boxX = ratioKey === 'youtube' ? Math.round(width * 0.54) : Math.round(width * 0.13);
+    const boxY = ratioKey === 'youtube' ? Math.round(height * 0.16) : Math.round(height * 0.24);
+    const radius = Math.max(20, Math.round(width * 0.015));
+
+    // Soft glass frame.
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.beginPath();
+    ctx.roundRect(boxX - 10, boxY - 10, boxW + 20, boxH + 20, radius + 4);
+    ctx.fill();
+
+    // Clip rounded image.
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
+    ctx.clip();
+    ctx.drawImage(subject, boxX, boxY, boxW, boxH);
+    ctx.restore();
+
+    // Vignette over subject for depth.
+    const vignette = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
+    vignette.addColorStop(0, 'rgba(0,0,0,0.00)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.28)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(boxX, boxY, boxW, boxH);
   }
 
+  // Main title lines.
   ctx.fillStyle = '#ffffff';
-  ctx.font = `800 ${Math.round(width * 0.08)}px Inter, Arial, sans-serif`;
-  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.64), ratioKey === 'youtube' ? 2 : 3);
+  ctx.font = `800 ${Math.round(width * 0.07)}px Inter, Arial, sans-serif`;
+  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.5), ratioKey === 'youtube' ? 2 : 3);
 
-  let textY = ratioKey === 'youtube' ? Math.round(height * 0.9) : Math.round(height * 0.82);
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const line = lines[i];
-    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-    ctx.lineWidth = Math.max(5, Math.round(width * 0.004));
-    ctx.strokeText(line, Math.round(width * 0.07), textY);
-    ctx.fillText(line, Math.round(width * 0.07), textY);
-    textY -= Math.round(width * 0.09);
+  let textY = ratioKey === 'youtube' ? Math.round(height * 0.8) : Math.round(height * 0.76);
+  for (const line of lines) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.58)';
+    ctx.lineWidth = Math.max(6, Math.round(width * 0.0042));
+    ctx.strokeText(line, Math.round(width * 0.06), textY);
+    ctx.fillText(line, Math.round(width * 0.06), textY);
+    textY += Math.round(width * 0.08);
   }
 
-  ctx.font = `700 ${Math.round(width * 0.06)}px Inter, Arial, sans-serif`;
+  // Bottom progress text similar to reference style.
+  ctx.font = `700 ${Math.round(width * 0.055)}px Inter, Arial, sans-serif`;
+  ctx.fillStyle = '#f3f6ff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+  ctx.lineWidth = Math.max(4, Math.round(width * 0.0035));
   const progressText = 'beginner → pro';
-  ctx.fillText(progressText, Math.round(width * 0.07), ratioKey === 'youtube' ? Math.round(height * 0.97) : Math.round(height * 0.94));
+  const progressY = ratioKey === 'youtube' ? Math.round(height * 0.96) : Math.round(height * 0.92);
+  ctx.strokeText(progressText, Math.round(width * 0.06), progressY);
+  ctx.fillText(progressText, Math.round(width * 0.06), progressY);
 
   return canvas.toDataURL('image/png');
 }
