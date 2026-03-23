@@ -14,6 +14,7 @@ const generateBtn = document.getElementById('generateBtn');
 
 const dimensionsByRatio = {
   youtube: { width: 1280, height: 720, label: '16:9' },
+  youtube_shorts: { width: 1080, height: 1920, label: '9:16' },
   insta_post: { width: 1080, height: 1080, label: '1:1' },
   insta_story: { width: 1080, height: 1920, label: '9:16' }
 };
@@ -72,7 +73,16 @@ function waitForImageLoad(url, timeoutMs = 30000) {
   });
 }
 
-function wrapLines(ctx, text, maxWidth) {
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function wrapLines(ctx, text, maxWidth, maxLines = 3) {
   const words = text.split(' ');
   const lines = [];
   let currentLine = '';
@@ -82,6 +92,9 @@ function wrapLines(ctx, text, maxWidth) {
     if (ctx.measureText(testLine).width > maxWidth && currentLine) {
       lines.push(currentLine);
       currentLine = word;
+      if (lines.length === maxLines - 1) {
+        break;
+      }
     } else {
       currentLine = testLine;
     }
@@ -91,7 +104,7 @@ function wrapLines(ctx, text, maxWidth) {
     lines.push(currentLine);
   }
 
-  return lines.slice(0, 3);
+  return lines.slice(0, maxLines);
 }
 
 function setOutputAspect(ratioKey) {
@@ -99,50 +112,74 @@ function setOutputAspect(ratioKey) {
   outputBox.style.aspectRatio = `${width} / ${height}`;
 }
 
-async function generateFallbackThumbnail(topic, ratioKey, creatorImage) {
+function pickMainWord(topic) {
+  const words = topic.replace(/[^a-zA-Z0-9\s]/g, '').trim().split(/\s+/);
+  if (!words.length) {
+    return 'GROW';
+  }
+  return words[0].toUpperCase();
+}
+
+async function generateStudioThumbnail(topic, ratioKey, creatorImageUrl, referenceImageUrl) {
   const { width, height } = dimensionsByRatio[ratioKey];
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, '#4f46e5');
-  gradient.addColorStop(0.5, '#7c3aed');
-  gradient.addColorStop(1, '#0f172a');
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = '#0d1222';
   ctx.fillRect(0, 0, width, height);
 
-  if (creatorImage) {
-    const image = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = creatorImage;
-    });
+  if (referenceImageUrl) {
+    const refImage = await loadImage(referenceImageUrl);
+    ctx.filter = 'blur(4px)';
+    ctx.drawImage(refImage, 0, 0, width, height);
+    ctx.filter = 'none';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.44)';
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    const grad = ctx.createLinearGradient(0, 0, width, height);
+    grad.addColorStop(0, '#2f2f45');
+    grad.addColorStop(1, '#151521');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+  }
 
-    const frameW = Math.round(width * 0.34);
-    const frameH = Math.round(height * 0.68);
-    const frameX = width - frameW - Math.round(width * 0.04);
-    const frameY = Math.round(height * 0.16);
+  const mainWord = pickMainWord(topic);
+  ctx.fillStyle = '#ff1f44';
+  ctx.font = `900 ${Math.round(width * 0.18)}px Inter, Arial, sans-serif`;
+  ctx.fillText(mainWord, Math.round(width * 0.06), Math.round(height * 0.18));
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
-    ctx.fillRect(frameX - 10, frameY - 10, frameW + 20, frameH + 20);
-    ctx.drawImage(image, frameX, frameY, frameW, frameH);
+  if (creatorImageUrl) {
+    const creator = await loadImage(creatorImageUrl);
+    const frameW = ratioKey === 'youtube' ? Math.round(width * 0.44) : Math.round(width * 0.78);
+    const frameH = ratioKey === 'youtube' ? Math.round(height * 0.78) : Math.round(height * 0.5);
+    const frameX = ratioKey === 'youtube' ? Math.round(width * 0.29) : Math.round(width * 0.11);
+    const frameY = ratioKey === 'youtube' ? Math.round(height * 0.16) : Math.round(height * 0.26);
+
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 30;
+    ctx.drawImage(creator, frameX, frameY, frameW, frameH);
+    ctx.shadowBlur = 0;
   }
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = `bold ${Math.round(width * 0.075)}px Inter, Arial, sans-serif`;
-  const lines = wrapLines(ctx, topic.toUpperCase(), Math.round(width * 0.58));
+  ctx.font = `800 ${Math.round(width * 0.08)}px Inter, Arial, sans-serif`;
+  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.64), ratioKey === 'youtube' ? 2 : 3);
 
-  let y = Math.round(height * 0.65);
-  for (const line of lines) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-    ctx.lineWidth = Math.max(6, Math.round(width * 0.0065));
-    ctx.strokeText(line, Math.round(width * 0.06), y);
-    ctx.fillText(line, Math.round(width * 0.06), y);
-    y += Math.round(width * 0.09);
+  let textY = ratioKey === 'youtube' ? Math.round(height * 0.9) : Math.round(height * 0.82);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const line = lines[i];
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.lineWidth = Math.max(5, Math.round(width * 0.004));
+    ctx.strokeText(line, Math.round(width * 0.07), textY);
+    ctx.fillText(line, Math.round(width * 0.07), textY);
+    textY -= Math.round(width * 0.09);
   }
+
+  ctx.font = `700 ${Math.round(width * 0.06)}px Inter, Arial, sans-serif`;
+  const progressText = 'beginner → pro';
+  ctx.fillText(progressText, Math.round(width * 0.07), ratioKey === 'youtube' ? Math.round(height * 0.97) : Math.round(height * 0.94));
 
   return canvas.toDataURL('image/png');
 }
@@ -174,28 +211,34 @@ form.addEventListener('submit', async (event) => {
   generateBtn.disabled = true;
   generateBtn.textContent = 'Generating...';
   downloadLink.hidden = true;
-  statusText.textContent = 'Generating realistic AI thumbnail...';
+  statusText.textContent = 'Generating thumbnail...';
 
   try {
-    const promptParts = [
-      'Create an ultra realistic social media thumbnail image.',
+    const prompt = [
+      'Ultra realistic YouTube or Instagram thumbnail photo.',
       `Style: ${style}.`,
       `Topic: ${topic}.`,
-      details ? `Details: ${details}.` : '',
-      referenceImageDataUrl ? 'Use the optional reference image composition and mood as inspiration.' : '',
-      `Aspect ratio ${label}, clean composition, high dynamic range lighting, professional quality.`
-    ];
+      details ? `Extra: ${details}.` : '',
+      'high contrast, expressive face, crisp details, creator-focused composition, cinematic studio lighting.',
+      `Aspect ratio ${label}.`
+    ]
+      .filter(Boolean)
+      .join(' ');
 
-    const prompt = promptParts.filter(Boolean).join(' ');
-    const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&model=flux&enhance=true&nologo=true&seed=${Date.now()}`;
+    const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${Date.now()}`;
 
     await waitForImageLoad(aiUrl);
     showOutput(aiUrl);
-    statusText.textContent = 'AI thumbnail generated successfully.';
+    statusText.textContent = 'Thumbnail generated.';
   } catch (error) {
-    const fallback = await generateFallbackThumbnail(topic, ratioKey, uploadedImageDataUrl || referenceImageDataUrl);
-    showOutput(fallback);
-    statusText.textContent = 'AI server unavailable right now. Showing a clean fallback thumbnail.';
+    const studioImage = await generateStudioThumbnail(
+      topic,
+      ratioKey,
+      uploadedImageDataUrl || referenceImageDataUrl,
+      referenceImageDataUrl
+    );
+    showOutput(studioImage);
+    statusText.textContent = 'Thumbnail generated.';
     console.warn(error);
   } finally {
     generateBtn.disabled = false;

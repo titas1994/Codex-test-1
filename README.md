@@ -9,6 +9,7 @@ A modern, glass-style thumbnail generator web app for YouTube and Instagram. Use
 - Optional **Reference image** preview (for creative guidance in prompt).
 - Output aspect ratio selector:
   - YouTube (16:9)
+  - YouTube Shorts (9:16)
   - Instagram Post (1:1)
   - Instagram Story/Reel (9:16)
 - AI output preview + download button.
