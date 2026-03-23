@@ -7,97 +7,96 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="ambient ambient-1"></div>
-    <div class="ambient ambient-2"></div>
+    <main class="app-shell">
+      <section class="panel controls">
+        <h1>🚀 AI Thumbnail Studio</h1>
+        <p class="muted">No login required • Session-based workspace</p>
 
-    <main class="container">
-      <section class="glass-card">
-        <h1>AI Thumbnail Studio</h1>
-        <p class="badge">No signup • No login • Instant use</p>
-        <p class="subtitle">
-          Generate realistic social thumbnails, add your own photo, and export in YouTube or Instagram sizes.
-        </p>
+        <label>Prompt input
+          <input id="promptInput" type="text" placeholder="viral tech thumbnail" />
+        </label>
 
-        <form id="thumbnail-form" class="form">
-          <label>
-            Video topic or title
-            <input id="videoTopic" type="text" placeholder="Example: 5 easy balcony gardening hacks" required />
+        <div class="grid-2">
+          <label>Style preset
+            <select id="stylePreset">
+              <option value="youtube">YouTube</option>
+              <option value="gaming">Gaming</option>
+              <option value="cinematic">Cinematic</option>
+              <option value="minimal">Minimal</option>
+            </select>
           </label>
-
-          <div class="two-cols">
-            <label>
-              Style preset
-              <select id="style">
-                <option value="photorealistic cinematic">Photorealistic cinematic</option>
-                <option value="studio portrait realistic">Studio portrait realistic</option>
-                <option value="bright lifestyle realism">Bright lifestyle realism</option>
-                <option value="dramatic documentary realism">Dramatic documentary realism</option>
-              </select>
-            </label>
-
-            <label>
-              Output ratio
-              <select id="aspectRatio">
-                <option value="youtube">YouTube (16:9)</option>
-                <option value="youtube_shorts">YouTube Shorts (9:16)</option>
-                <option value="insta_post">Instagram Post (1:1)</option>
-                <option value="insta_story">Instagram Story/Reel (9:16)</option>
-              </select>
-            </label>
-          </div>
-
-          <label>
-            Extra details (optional)
-            <textarea id="details" rows="3" placeholder="Add mood, scene, camera angle, text idea..."></textarea>
+          <label>Platform size
+            <select id="platformSize">
+              <option value="youtube">YouTube 1280×720</option>
+              <option value="youtube_shorts">YouTube Shorts 1080×1920</option>
+              <option value="instagram">Instagram/Reels 1080×1350</option>
+              <option value="tiktok">TikTok 1080×1920</option>
+            </select>
           </label>
-
-          <div class="two-cols">
-            <label>
-              Your image (optional)
-              <input id="uploadImage" type="file" accept="image/*" />
-            </label>
-
-            <label>
-              Reference image (optional)
-              <input id="referenceImage" type="file" accept="image/*" />
-            </label>
-          </div>
-
-          <button id="generateBtn" type="submit">Generate thumbnail</button>
-        </form>
-      </section>
-
-      <section class="glass-card previews">
-        <div class="preview-grid">
-          <article>
-            <h2>Your image preview</h2>
-            <div class="preview-box">
-              <img id="uploadedPreview" alt="Uploaded image preview" hidden />
-              <p id="uploadedPlaceholder">No personal image uploaded yet.</p>
-            </div>
-          </article>
-
-          <article>
-            <h2>Reference preview</h2>
-            <div class="preview-box">
-              <img id="referencePreview" alt="Reference image preview" hidden />
-              <p id="referencePlaceholder">No reference image uploaded yet.</p>
-            </div>
-          </article>
         </div>
 
-        <article>
-          <h2>AI output preview</h2>
-          <div class="preview-box output-box" id="outputBox">
-            <img id="outputPreview" alt="Generated thumbnail preview" hidden />
-            <p id="outputPlaceholder">Your generated image will appear here.</p>
-          </div>
-          <div class="actions">
-            <a id="downloadLink" class="download" hidden download="thumbnail-output.png">Download image</a>
-          </div>
-        </article>
+        <div class="grid-2">
+          <label>Upload image
+            <input id="uploadImage" type="file" accept="image/*" />
+          </label>
+          <label>Reference image
+            <input id="referenceImage" type="file" accept="image/*" />
+          </label>
+        </div>
 
-        <p id="status" aria-live="polite"></p>
+        <div class="grid-2">
+          <label>Upload video
+            <input id="videoInput" type="file" accept="video/*" />
+          </label>
+          <label>YouTube link (optional)
+            <input id="youtubeLink" type="url" placeholder="https://youtube.com/watch?v=..." />
+          </label>
+        </div>
+
+        <label>Variations (4–10)
+          <input id="variationCount" type="range" min="4" max="10" value="4" />
+          <span id="variationValue">4</span>
+        </label>
+
+        <h3>Smart Editor</h3>
+        <div class="grid-2">
+          <label>Text size <input id="textSize" type="range" min="42" max="140" value="84" /></label>
+          <label>Contrast <input id="contrast" type="range" min="0.8" max="1.8" step="0.1" value="1.2" /></label>
+          <label>Stroke <input id="stroke" type="range" min="2" max="18" value="8" /></label>
+          <label>Shadow <input id="shadow" type="range" min="0" max="35" value="16" /></label>
+        </div>
+
+        <div class="assist-row">
+          <button type="button" class="ghost" id="btnViral">Make it more viral</button>
+          <button type="button" class="ghost" id="btnReadable">Improve readability</button>
+          <button type="button" class="ghost" id="btnContrast">Boost contrast</button>
+        </div>
+
+        <div class="action-row">
+          <button id="generateBtn" type="button">Generate thumbnails</button>
+          <button id="downloadAllBtn" type="button" class="ghost">Download all</button>
+        </div>
+      </section>
+
+      <section class="panel output">
+        <h2>🎯 CTR Optimization</h2>
+        <p id="scoreText">Click potential: --%</p>
+        <ul id="hookList"></ul>
+        <p id="improveText" class="muted"></p>
+
+        <h2>🔁 A/B Variations</h2>
+        <div id="gallery" class="gallery"></div>
+
+        <div class="action-row">
+          <select id="exportFormat">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPG</option>
+            <option value="webp">WebP</option>
+          </select>
+          <button id="downloadSelectedBtn" type="button">Download selected</button>
+        </div>
+
+        <p id="status" class="muted">Ready.</p>
       </section>
     </main>
 

@@ -1,75 +1,53 @@
-const form = document.getElementById('thumbnail-form');
-const uploadInput = document.getElementById('uploadImage');
-const referenceInput = document.getElementById('referenceImage');
-const uploadedPreview = document.getElementById('uploadedPreview');
-const uploadedPlaceholder = document.getElementById('uploadedPlaceholder');
-const referencePreview = document.getElementById('referencePreview');
-const referencePlaceholder = document.getElementById('referencePlaceholder');
-const outputPreview = document.getElementById('outputPreview');
-const outputPlaceholder = document.getElementById('outputPlaceholder');
-const outputBox = document.getElementById('outputBox');
-const statusText = document.getElementById('status');
-const downloadLink = document.getElementById('downloadLink');
-const generateBtn = document.getElementById('generateBtn');
-
-const dimensionsByRatio = {
-  youtube: { width: 1280, height: 720, label: '16:9' },
-  youtube_shorts: { width: 1080, height: 1920, label: '9:16' },
-  insta_post: { width: 1080, height: 1080, label: '1:1' },
-  insta_story: { width: 1080, height: 1920, label: '9:16' }
+const dimensions = {
+  youtube: { w: 1280, h: 720 },
+  youtube_shorts: { w: 1080, h: 1920 },
+  instagram: { w: 1080, h: 1350 },
+  tiktok: { w: 1080, h: 1920 }
 };
 
-let uploadedImageDataUrl = '';
-let referenceImageDataUrl = '';
+const promptInput = document.getElementById('promptInput');
+const stylePreset = document.getElementById('stylePreset');
+const platformSize = document.getElementById('platformSize');
+const uploadImage = document.getElementById('uploadImage');
+const referenceImage = document.getElementById('referenceImage');
+const videoInput = document.getElementById('videoInput');
+const youtubeLink = document.getElementById('youtubeLink');
+const variationCount = document.getElementById('variationCount');
+const variationValue = document.getElementById('variationValue');
+const textSize = document.getElementById('textSize');
+const contrast = document.getElementById('contrast');
+const stroke = document.getElementById('stroke');
+const shadow = document.getElementById('shadow');
+const scoreText = document.getElementById('scoreText');
+const hookList = document.getElementById('hookList');
+const improveText = document.getElementById('improveText');
+const gallery = document.getElementById('gallery');
+const statusEl = document.getElementById('status');
+const exportFormat = document.getElementById('exportFormat');
 
-function previewLocalImage(input, target, placeholder, setter) {
-  const file = input.files?.[0];
-  if (!file) {
-    setter('');
-    target.hidden = true;
-    placeholder.hidden = false;
-    return;
-  }
+const generateBtn = document.getElementById('generateBtn');
+const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+const downloadAllBtn = document.getElementById('downloadAllBtn');
+const btnViral = document.getElementById('btnViral');
+const btnReadable = document.getElementById('btnReadable');
+const btnContrast = document.getElementById('btnContrast');
 
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const data = String(event.target?.result || '');
-    setter(data);
-    target.src = data;
-    target.hidden = false;
-    placeholder.hidden = true;
-  };
-  reader.readAsDataURL(file);
-}
+let uploadData = '';
+let referenceData = '';
+let extractedFrameData = '';
+let selectedVariantIndex = 0;
+let generatedVariants = [];
 
-uploadInput.addEventListener('change', () => {
-  previewLocalImage(uploadInput, uploadedPreview, uploadedPlaceholder, (value) => {
-    uploadedImageDataUrl = value;
-  });
+variationCount.addEventListener('input', () => {
+  variationValue.textContent = variationCount.value;
 });
 
-referenceInput.addEventListener('change', () => {
-  previewLocalImage(referenceInput, referencePreview, referencePlaceholder, (value) => {
-    referenceImageDataUrl = value;
-  });
-});
-
-function waitForImageLoad(url, timeoutMs = 30000) {
+function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
-    const image = new Image();
-    const timer = setTimeout(() => reject(new Error('Image load timeout')), timeoutMs);
-
-    image.onload = () => {
-      clearTimeout(timer);
-      resolve();
-    };
-
-    image.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error('Image load failed'));
-    };
-
-    image.src = url;
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(String(e.target?.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -82,191 +60,286 @@ function loadImage(url) {
   });
 }
 
-function wrapLines(ctx, text, maxWidth, maxLines = 3) {
-  const words = text.split(' ');
-  const lines = [];
-  let currentLine = '';
+async function extractBestFrame(file) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement('video');
+  video.src = url;
+  video.muted = true;
+  video.playsInline = true;
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-      if (lines.length === maxLines - 1) {
-        break;
-      }
-    } else {
-      currentLine = testLine;
-    }
-  }
+  await new Promise((resolve) => {
+    video.addEventListener('loadedmetadata', resolve, { once: true });
+  });
 
-  if (currentLine) {
-    lines.push(currentLine);
-  }
+  const captureTime = Math.max(0.5, video.duration * 0.35);
+  video.currentTime = captureTime;
 
-  return lines.slice(0, maxLines);
-}
+  await new Promise((resolve) => {
+    video.addEventListener('seeked', resolve, { once: true });
+  });
 
-function setOutputAspect(ratioKey) {
-  const { width, height } = dimensionsByRatio[ratioKey];
-  outputBox.style.aspectRatio = `${width} / ${height}`;
-}
-
-function pickMainWord(topic) {
-  const words = topic.replace(/[^a-zA-Z0-9\s]/g, '').trim().split(/\s+/);
-  if (!words.length) {
-    return 'GROW';
-  }
-  return words[0].toUpperCase();
-}
-
-async function generateStudioThumbnail(topic, ratioKey, creatorImageUrl, referenceImageUrl) {
-  const { width, height } = dimensionsByRatio[ratioKey];
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = 1280;
+  canvas.height = 720;
   const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-  const subjectSource = creatorImageUrl || referenceImageUrl;
-  const subjectImage = subjectSource ? await loadImage(subjectSource) : null;
-
-  // Background (reference first, then subject, then gradient)
-  if (referenceImageUrl) {
-    const refImage = await loadImage(referenceImageUrl);
-    ctx.filter = 'blur(12px) saturate(1.25)';
-    ctx.drawImage(refImage, 0, 0, width, height);
-    ctx.filter = 'none';
-    ctx.globalAlpha = 0.33;
-    ctx.drawImage(refImage, 0, 0, width, height);
-    ctx.globalAlpha = 1;
-  } else if (subjectImage) {
-    ctx.filter = 'blur(14px) saturate(1.2)';
-    ctx.drawImage(subjectImage, 0, 0, width, height);
-    ctx.filter = 'none';
-  } else {
-    const grad = ctx.createLinearGradient(0, 0, width, height);
-    grad.addColorStop(0, '#1f2948');
-    grad.addColorStop(0.55, '#1f1444');
-    grad.addColorStop(1, '#0c0f1e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, width, height);
-  }
-
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.44)';
-  ctx.fillRect(0, 0, width, height);
-
-  const headlineWord = pickMainWord(topic).slice(0, 10);
-  ctx.fillStyle = '#ff244d';
-  ctx.font = `900 ${Math.round(width * 0.12)}px Inter, Arial, sans-serif`;
-  ctx.shadowColor = 'rgba(0,0,0,0.45)';
-  ctx.shadowBlur = 18;
-  ctx.fillText(headlineWord, Math.round(width * 0.06), Math.round(height * 0.18));
-  ctx.shadowBlur = 0;
-
-  if (subjectImage) {
-    const boxW = ratioKey === 'youtube' ? Math.round(width * 0.5) : Math.round(width * 0.78);
-    const boxH = ratioKey === 'youtube' ? Math.round(height * 0.84) : Math.round(height * 0.52);
-    const boxX = ratioKey === 'youtube' ? Math.round(width * 0.43) : Math.round(width * 0.11);
-    const boxY = ratioKey === 'youtube' ? Math.round(height * 0.08) : Math.round(height * 0.22);
-    const radius = Math.max(20, Math.round(width * 0.015));
-
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.beginPath();
-    ctx.roundRect(boxX - 8, boxY - 8, boxW + 16, boxH + 16, radius + 4);
-    ctx.fill();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(boxX, boxY, boxW, boxH, radius);
-    ctx.clip();
-    ctx.filter = 'saturate(1.15) contrast(1.08)';
-    ctx.drawImage(subjectImage, boxX, boxY, boxW, boxH);
-    ctx.filter = 'none';
-    ctx.restore();
-  }
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `800 ${Math.round(width * 0.072)}px Inter, Arial, sans-serif`;
-  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.52), ratioKey === 'youtube' ? 2 : 3);
-
-  let textY = ratioKey === 'youtube' ? Math.round(height * 0.77) : Math.round(height * 0.72);
-  for (const line of lines) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = Math.max(6, Math.round(width * 0.0045));
-    ctx.strokeText(line, Math.round(width * 0.06), textY);
-    ctx.fillText(line, Math.round(width * 0.06), textY);
-    textY += Math.round(width * 0.08);
-  }
-
-  ctx.font = `700 ${Math.round(width * 0.055)}px Inter, Arial, sans-serif`;
-  const progressText = 'beginner → pro';
-  const progressY = ratioKey === 'youtube' ? Math.round(height * 0.95) : Math.round(height * 0.91);
-  ctx.strokeText(progressText, Math.round(width * 0.06), progressY);
-  ctx.fillText(progressText, Math.round(width * 0.06), progressY);
-
+  URL.revokeObjectURL(url);
   return canvas.toDataURL('image/png');
 }
 
-function showOutput(url) {
-  outputPreview.src = url;
-  outputPreview.hidden = false;
-  outputPlaceholder.hidden = true;
-  downloadLink.href = url;
-  downloadLink.hidden = false;
+function extractYouTubeId(url) {
+  const match = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return match ? match[1] : '';
 }
 
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
+function getHooks(prompt) {
+  const base = prompt.split(' ')[0]?.toUpperCase() || 'THIS';
+  return [
+    `${base} changed everything!`,
+    `Don’t miss this ${base.toLowerCase()} trick`,
+    `Before vs After (${base})`,
+    `I wish I knew this sooner`
+  ];
+}
 
-  const topic = document.getElementById('videoTopic').value.trim();
-  const style = document.getElementById('style').value;
-  const details = document.getElementById('details').value.trim();
-  const ratioKey = document.getElementById('aspectRatio').value;
-  const { width, height, label } = dimensionsByRatio[ratioKey];
+function scoreThumbnail(prompt, style, hasFaceLike) {
+  let score = 58;
+  if (prompt.length > 14) score += 8;
+  if (style === 'cinematic') score += 7;
+  if (style === 'gaming') score += 6;
+  if (hasFaceLike) score += 10;
+  score += Math.min(12, Number(contrast.value) * 6);
+  return Math.min(98, Math.round(score));
+}
 
-  if (!topic) {
-    statusText.textContent = 'Please add a video topic first.';
+function wrapLines(ctx, text, maxWidth, maxLines = 3) {
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  for (const word of words) {
+    const t = cur ? `${cur} ${word}` : word;
+    if (ctx.measureText(t).width > maxWidth && cur) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = t;
+    }
+    if (lines.length === maxLines - 1) break;
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function buildVariant(index, cfg) {
+  const { w, h } = dimensions[cfg.platform];
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  const bgSource = cfg.reference || cfg.videoFrame || cfg.upload;
+  if (bgSource) {
+    const bg = await loadImage(bgSource);
+    ctx.filter = `blur(${6 + index}px) saturate(${1.1 + index * 0.05}) contrast(${cfg.contrast})`;
+    ctx.drawImage(bg, 0, 0, w, h);
+    ctx.filter = 'none';
+    ctx.globalAlpha = 0.22;
+    ctx.drawImage(bg, 0, 0, w, h);
+    ctx.globalAlpha = 1;
+  } else {
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    const themes = {
+      youtube: ['#1e293b', '#7c3aed'],
+      gaming: ['#111827', '#14b8a6'],
+      cinematic: ['#0f172a', '#7f1d1d'],
+      minimal: ['#1f2937', '#374151']
+    };
+    const [c1, c2] = themes[cfg.style];
+    g.addColorStop(0, c1);
+    g.addColorStop(1, c2);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 0, w, h);
+
+  const subjectSource = cfg.upload || cfg.reference || cfg.videoFrame;
+  if (subjectSource) {
+    const subject = await loadImage(subjectSource);
+    const sw = cfg.platform === 'youtube' ? Math.round(w * 0.46) : Math.round(w * 0.72);
+    const sh = cfg.platform === 'youtube' ? Math.round(h * 0.82) : Math.round(h * 0.5);
+    const sx = cfg.platform === 'youtube' ? Math.round(w * 0.5) : Math.round(w * 0.15);
+    const sy = cfg.platform === 'youtube' ? Math.round(h * 0.1) : Math.round(h * 0.25);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fillRect(sx - 8, sy - 8, sw + 16, sh + 16);
+    ctx.filter = `contrast(${1.05 + index * 0.04}) saturate(${1.12 + index * 0.04})`;
+    ctx.drawImage(subject, sx, sy, sw, sh);
+    ctx.filter = 'none';
+  }
+
+  ctx.font = `900 ${Math.round(w * 0.12)}px Inter, Arial`;
+  ctx.fillStyle = ['#ff2d55', '#22d3ee', '#f97316', '#a3e635'][index % 4];
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = Number(shadow.value);
+  ctx.fillText(cfg.prompt.split(' ')[0].toUpperCase().slice(0, 10), Math.round(w * 0.06), Math.round(h * 0.18));
+  ctx.shadowBlur = 0;
+
+  ctx.font = `800 ${Number(textSize.value)}px Inter, Arial`;
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = Number(stroke.value);
+  const lines = wrapLines(ctx, cfg.prompt.toLowerCase(), Math.round(w * 0.52), cfg.platform === 'youtube' ? 2 : 3);
+  let y = cfg.platform === 'youtube' ? Math.round(h * 0.78) : Math.round(h * 0.76);
+  lines.forEach((line) => {
+    ctx.strokeText(line, Math.round(w * 0.06), y);
+    ctx.fillText(line, Math.round(w * 0.06), y);
+    y += Math.round(w * 0.075);
+  });
+
+  ctx.font = `700 ${Math.round(w * 0.052)}px Inter, Arial`;
+  ctx.strokeText('beginner → pro', Math.round(w * 0.06), Math.round(h * 0.95));
+  ctx.fillText('beginner → pro', Math.round(w * 0.06), Math.round(h * 0.95));
+
+  return canvas.toDataURL(`image/${exportFormat.value === 'jpg' ? 'jpeg' : exportFormat.value}`);
+}
+
+function renderGallery() {
+  gallery.innerHTML = '';
+  generatedVariants.forEach((url, idx) => {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <img src="${url}" alt="Variant ${idx + 1}" />
+      <div class="meta">
+        <span>Variant ${idx + 1}</span>
+        <input type="radio" name="variant" ${idx === selectedVariantIndex ? 'checked' : ''} />
+      </div>
+    `;
+    card.querySelector('input').addEventListener('change', () => {
+      selectedVariantIndex = idx;
+    });
+    gallery.appendChild(card);
+  });
+}
+
+function saveSession() {
+  sessionStorage.setItem('thumbStudioState', JSON.stringify({
+    prompt: promptInput.value,
+    style: stylePreset.value,
+    platform: platformSize.value,
+    variants: generatedVariants,
+    selected: selectedVariantIndex
+  }));
+}
+
+function restoreSession() {
+  const raw = sessionStorage.getItem('thumbStudioState');
+  if (!raw) return;
+  const data = JSON.parse(raw);
+  promptInput.value = data.prompt || '';
+  stylePreset.value = data.style || 'youtube';
+  platformSize.value = data.platform || 'youtube';
+  generatedVariants = data.variants || [];
+  selectedVariantIndex = data.selected || 0;
+  if (generatedVariants.length) {
+    renderGallery();
+    statusEl.textContent = `Restored ${generatedVariants.length} thumbnails from this session.`;
+  }
+}
+
+async function generateAll() {
+  const prompt = promptInput.value.trim();
+  if (!prompt) {
+    statusEl.textContent = 'Please enter a prompt.';
     return;
   }
 
-  setOutputAspect(ratioKey);
+  statusEl.textContent = 'Generating variations...';
+  const count = Number(variationCount.value);
 
-  generateBtn.disabled = true;
-  generateBtn.textContent = 'Generating...';
-  downloadLink.hidden = true;
-  statusText.textContent = 'Generating thumbnail...';
+  const hooks = getHooks(prompt);
+  hookList.innerHTML = hooks.map((h) => `<li>${h}</li>`).join('');
+  const score = scoreThumbnail(prompt, stylePreset.value, Boolean(uploadData));
+  scoreText.textContent = `Click potential: ${score}%`;
+  improveText.textContent = score < 78
+    ? 'Suggestion: Improve contrast + use shorter text + stronger face focus.'
+    : 'Great! Keep text short and ensure one clear focal subject.';
 
-  try {
-    const prompt = [
-      'Ultra realistic YouTube or Instagram thumbnail photo.',
-      `Style: ${style}.`,
-      `Topic: ${topic}.`,
-      details ? `Extra: ${details}.` : '',
-      'high contrast, expressive face, crisp details, creator-focused composition, cinematic studio lighting.',
-      `Aspect ratio ${label}.`
-    ]
-      .filter(Boolean)
-      .join(' ');
+  generatedVariants = [];
+  for (let i = 0; i < count; i += 1) {
+    const variant = await buildVariant(i, {
+      prompt,
+      style: stylePreset.value,
+      platform: platformSize.value,
+      upload: uploadData,
+      reference: referenceData,
+      videoFrame: extractedFrameData,
+      contrast: Number(contrast.value) + i * 0.05
+    });
+    generatedVariants.push(variant);
+  }
 
-    const aiUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${Date.now()}`;
+  selectedVariantIndex = 0;
+  renderGallery();
+  saveSession();
+  statusEl.textContent = `Generated ${count} thumbnails.`;
+}
 
-    await waitForImageLoad(aiUrl);
-    showOutput(aiUrl);
-    statusText.textContent = 'Thumbnail generated.';
-  } catch (error) {
-    const studioImage = await generateStudioThumbnail(
-      topic,
-      ratioKey,
-      uploadedImageDataUrl || referenceImageDataUrl,
-      referenceImageDataUrl
-    );
-    showOutput(studioImage);
-    statusText.textContent = 'Thumbnail generated.';
-    console.warn(error);
-  } finally {
-    generateBtn.disabled = false;
-    generateBtn.textContent = 'Generate thumbnail';
+uploadImage.addEventListener('change', async () => {
+  if (uploadImage.files?.[0]) uploadData = await fileToDataUrl(uploadImage.files[0]);
+});
+referenceImage.addEventListener('change', async () => {
+  if (referenceImage.files?.[0]) referenceData = await fileToDataUrl(referenceImage.files[0]);
+});
+videoInput.addEventListener('change', async () => {
+  if (!videoInput.files?.[0]) return;
+  statusEl.textContent = 'Extracting key video frame...';
+  extractedFrameData = await extractBestFrame(videoInput.files[0]);
+  statusEl.textContent = 'Video frame extracted.';
+});
+
+youtubeLink.addEventListener('change', () => {
+  const id = extractYouTubeId(youtubeLink.value.trim());
+  if (id) {
+    referenceData = `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+    statusEl.textContent = 'Using YouTube thumbnail as reference image.';
   }
 });
 
-setOutputAspect('youtube');
+btnViral.addEventListener('click', () => {
+  textSize.value = Math.min(140, Number(textSize.value) + 8);
+  shadow.value = Math.min(35, Number(shadow.value) + 6);
+});
+btnReadable.addEventListener('click', () => {
+  stroke.value = Math.min(18, Number(stroke.value) + 3);
+  textSize.value = Math.max(62, Number(textSize.value));
+});
+btnContrast.addEventListener('click', () => {
+  contrast.value = Math.min(1.8, Number(contrast.value) + 0.2).toFixed(1);
+});
+
+generateBtn.addEventListener('click', generateAll);
+
+downloadSelectedBtn.addEventListener('click', () => {
+  if (!generatedVariants.length) return;
+  const link = document.createElement('a');
+  const fmt = exportFormat.value === 'jpg' ? 'jpg' : exportFormat.value;
+  link.href = generatedVariants[selectedVariantIndex];
+  link.download = `thumbnail-${selectedVariantIndex + 1}.${fmt}`;
+  link.click();
+});
+
+downloadAllBtn.addEventListener('click', () => {
+  const fmt = exportFormat.value === 'jpg' ? 'jpg' : exportFormat.value;
+  generatedVariants.forEach((url, i) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `thumbnail-${i + 1}.${fmt}`;
+    link.click();
+  });
+});
+
+restoreSession();
