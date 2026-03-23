@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI YouTube Thumbnail Generator</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <section class="card">
+        <h1>AI YouTube Thumbnail Generator</h1>
+        <p class="subtitle">
+          Type your video idea, optionally upload your own image, and generate a thumbnail in one click.
+        </p>
+
+        <form id="thumbnail-form" class="form">
+          <label>
+            Video topic or title
+            <input
+              id="videoTopic"
+              type="text"
+              placeholder="Example: How I grew on YouTube in 30 days"
+              required
+            />
+          </label>
+
+          <label>
+            Thumbnail style
+            <select id="style">
+              <option value="bold and cinematic">Bold & cinematic</option>
+              <option value="minimal and clean">Minimal & clean</option>
+              <option value="bright and energetic">Bright & energetic</option>
+              <option value="gaming neon">Gaming neon</option>
+              <option value="tech review">Tech review</option>
+            </select>
+          </label>
+
+          <label>
+            Extra details (optional)
+            <textarea
+              id="details"
+              rows="3"
+              placeholder="Add text ideas, mood, objects, colors, emotions..."
+            ></textarea>
+          </label>
+
+          <label>
+            Upload your own image (optional)
+            <input id="uploadImage" type="file" accept="image/*" />
+          </label>
+
+          <button id="generateBtn" type="submit">Generate thumbnail</button>
+        </form>
+      </section>
+
+      <section class="card previews">
+        <div>
+          <h2>Uploaded image preview</h2>
+          <div class="preview-box">
+            <img id="uploadedPreview" alt="Uploaded preview" hidden />
+            <p id="uploadedPlaceholder">No image uploaded yet.</p>
+          </div>
+        </div>
+
+        <div>
+          <h2>AI output preview</h2>
+          <div class="preview-box">
+            <img id="outputPreview" alt="Generated thumbnail preview" hidden />
+            <p id="outputPlaceholder">Your generated thumbnail will appear here.</p>
+          </div>
+          <div class="actions">
+            <a id="downloadLink" class="download" hidden download="youtube-thumbnail.png">Download image</a>
+          </div>
+        </div>
+
+        <p id="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
