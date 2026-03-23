@@ -67,6 +67,17 @@ h2 {
   margin-bottom: 0.65rem;
 }
 
+.badge {
+  display: inline-block;
+  margin: 0 0 0.55rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(152, 181, 255, 0.48);
+  background: rgba(49, 71, 124, 0.35);
+  font-size: 0.84rem;
+  color: rgba(226, 235, 255, 0.94);
+}
+
 .subtitle {
   color: var(--muted);
   margin-bottom: 1.1rem;

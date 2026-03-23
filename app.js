@@ -127,20 +127,22 @@ async function generateStudioThumbnail(topic, ratioKey, creatorImageUrl, referen
   canvas.height = height;
   const ctx = canvas.getContext('2d');
 
-  // Base background layer (prefer reference image when available).
+  const subjectSource = creatorImageUrl || referenceImageUrl;
+  const subjectImage = subjectSource ? await loadImage(subjectSource) : null;
+
+  // Background (reference first, then subject, then gradient)
   if (referenceImageUrl) {
     const refImage = await loadImage(referenceImageUrl);
-    ctx.filter = 'blur(10px) saturate(1.2)';
+    ctx.filter = 'blur(12px) saturate(1.25)';
     ctx.drawImage(refImage, 0, 0, width, height);
     ctx.filter = 'none';
-
-    // Bring back some detail so it looks premium, not flat.
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.33;
     ctx.drawImage(refImage, 0, 0, width, height);
     ctx.globalAlpha = 1;
-
-    ctx.fillStyle = 'rgba(8, 10, 20, 0.42)';
-    ctx.fillRect(0, 0, width, height);
+  } else if (subjectImage) {
+    ctx.filter = 'blur(14px) saturate(1.2)';
+    ctx.drawImage(subjectImage, 0, 0, width, height);
+    ctx.filter = 'none';
   } else {
     const grad = ctx.createLinearGradient(0, 0, width, height);
     grad.addColorStop(0, '#1f2948');
@@ -150,67 +152,55 @@ async function generateStudioThumbnail(topic, ratioKey, creatorImageUrl, referen
     ctx.fillRect(0, 0, width, height);
   }
 
-  const headlineWord = pickMainWord(topic);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.44)';
+  ctx.fillRect(0, 0, width, height);
+
+  const headlineWord = pickMainWord(topic).slice(0, 10);
   ctx.fillStyle = '#ff244d';
-  ctx.font = `900 ${Math.round(width * 0.14)}px Inter, Arial, sans-serif`;
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = 14;
-  ctx.fillText(headlineWord, Math.round(width * 0.06), Math.round(height * 0.2));
+  ctx.font = `900 ${Math.round(width * 0.12)}px Inter, Arial, sans-serif`;
+  ctx.shadowColor = 'rgba(0,0,0,0.45)';
+  ctx.shadowBlur = 18;
+  ctx.fillText(headlineWord, Math.round(width * 0.06), Math.round(height * 0.18));
   ctx.shadowBlur = 0;
 
-  const subjectSource = creatorImageUrl || referenceImageUrl;
-  if (subjectSource) {
-    const subject = await loadImage(subjectSource);
-
-    const boxW = ratioKey === 'youtube' ? Math.round(width * 0.4) : Math.round(width * 0.74);
-    const boxH = ratioKey === 'youtube' ? Math.round(height * 0.74) : Math.round(height * 0.5);
-    const boxX = ratioKey === 'youtube' ? Math.round(width * 0.54) : Math.round(width * 0.13);
-    const boxY = ratioKey === 'youtube' ? Math.round(height * 0.16) : Math.round(height * 0.24);
+  if (subjectImage) {
+    const boxW = ratioKey === 'youtube' ? Math.round(width * 0.5) : Math.round(width * 0.78);
+    const boxH = ratioKey === 'youtube' ? Math.round(height * 0.84) : Math.round(height * 0.52);
+    const boxX = ratioKey === 'youtube' ? Math.round(width * 0.43) : Math.round(width * 0.11);
+    const boxY = ratioKey === 'youtube' ? Math.round(height * 0.08) : Math.round(height * 0.22);
     const radius = Math.max(20, Math.round(width * 0.015));
 
-    // Soft glass frame.
-    ctx.fillStyle = 'rgba(255,255,255,0.14)';
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.beginPath();
-    ctx.roundRect(boxX - 10, boxY - 10, boxW + 20, boxH + 20, radius + 4);
+    ctx.roundRect(boxX - 8, boxY - 8, boxW + 16, boxH + 16, radius + 4);
     ctx.fill();
 
-    // Clip rounded image.
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(boxX, boxY, boxW, boxH, radius);
     ctx.clip();
-    ctx.drawImage(subject, boxX, boxY, boxW, boxH);
+    ctx.filter = 'saturate(1.15) contrast(1.08)';
+    ctx.drawImage(subjectImage, boxX, boxY, boxW, boxH);
+    ctx.filter = 'none';
     ctx.restore();
-
-    // Vignette over subject for depth.
-    const vignette = ctx.createLinearGradient(0, boxY, 0, boxY + boxH);
-    vignette.addColorStop(0, 'rgba(0,0,0,0.00)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.28)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(boxX, boxY, boxW, boxH);
   }
 
-  // Main title lines.
   ctx.fillStyle = '#ffffff';
-  ctx.font = `800 ${Math.round(width * 0.07)}px Inter, Arial, sans-serif`;
-  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.5), ratioKey === 'youtube' ? 2 : 3);
+  ctx.font = `800 ${Math.round(width * 0.072)}px Inter, Arial, sans-serif`;
+  const lines = wrapLines(ctx, topic.toLowerCase(), Math.round(width * 0.52), ratioKey === 'youtube' ? 2 : 3);
 
-  let textY = ratioKey === 'youtube' ? Math.round(height * 0.8) : Math.round(height * 0.76);
+  let textY = ratioKey === 'youtube' ? Math.round(height * 0.77) : Math.round(height * 0.72);
   for (const line of lines) {
-    ctx.strokeStyle = 'rgba(0,0,0,0.58)';
-    ctx.lineWidth = Math.max(6, Math.round(width * 0.0042));
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = Math.max(6, Math.round(width * 0.0045));
     ctx.strokeText(line, Math.round(width * 0.06), textY);
     ctx.fillText(line, Math.round(width * 0.06), textY);
     textY += Math.round(width * 0.08);
   }
 
-  // Bottom progress text similar to reference style.
   ctx.font = `700 ${Math.round(width * 0.055)}px Inter, Arial, sans-serif`;
-  ctx.fillStyle = '#f3f6ff';
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.lineWidth = Math.max(4, Math.round(width * 0.0035));
   const progressText = 'beginner → pro';
-  const progressY = ratioKey === 'youtube' ? Math.round(height * 0.96) : Math.round(height * 0.92);
+  const progressY = ratioKey === 'youtube' ? Math.round(height * 0.95) : Math.round(height * 0.91);
   ctx.strokeText(progressText, Math.round(width * 0.06), progressY);
   ctx.fillText(progressText, Math.round(width * 0.06), progressY);
 
