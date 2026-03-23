@@ -1,3 +1,23 @@
+async function toDataUrlFromResponse(response) {
+  const contentType = response.headers.get('content-type') || 'image/jpeg';
+  const arrayBuffer = await response.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  if (buffer.length < 2500) {
+    throw new Error('Image payload too small');
+  }
+
+  return `data:${contentType};base64,${buffer.toString('base64')}`;
+}
+
+async function fetchImageAsDataUrl(url) {
+  const response = await fetch(url, { redirect: 'follow' });
+  if (!response.ok) throw new Error(`Image fetch failed: ${response.status}`);
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('image')) throw new Error('Response is not an image');
+  return toDataUrlFromResponse(response);
+}
+
 async function generateWithOpenAI({ prompt, size, n, apiKey }) {
   const response = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
@@ -5,12 +25,7 @@ async function generateWithOpenAI({ prompt, size, n, apiKey }) {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      model: 'gpt-image-1',
-      prompt,
-      size,
-      n
-    })
+    body: JSON.stringify({ model: 'gpt-image-1', prompt, size, n })
   });
 
   const result = await response.json();
@@ -27,35 +42,46 @@ async function generateWithOpenAI({ prompt, size, n, apiKey }) {
 function fallbackSvgDataUrl(size, label) {
   const [w, h] = size.split('x').map(Number);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>
-  <defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#253b72'/><stop offset='1' stop-color='#1f1148'/></linearGradient></defs>
+  <defs>
+    <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+      <stop offset='0' stop-color='#1d3a7a'/><stop offset='1' stop-color='#3b1670'/>
+    </linearGradient>
+  </defs>
   <rect width='100%' height='100%' fill='url(#g)'/>
-  <text x='50%' y='50%' fill='white' font-size='48' font-family='Arial' text-anchor='middle'>${label}</text>
+  <text x='50%' y='50%' fill='white' font-size='54' font-family='Arial' text-anchor='middle'>${label}</text>
   </svg>`;
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
-async function generateWithPollinations({ prompt, size, n }) {
+async function generateWithFallbackProviders({ prompt, size, n }) {
   const [width, height] = size.split('x');
-  const safePrompt = encodeURIComponent(`${prompt} photorealistic, high detail, thumbnail design`);
-
-  const urls = Array.from({ length: n }, (_, idx) => (
-    `https://image.pollinations.ai/prompt/${safePrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${Date.now() + idx}`
-  ));
+  const keyword = encodeURIComponent(prompt.split(' ').slice(0, 3).join(' ') || 'technology');
+  const aiPrompt = encodeURIComponent(`${prompt} photorealistic, high detail, thumbnail design`);
 
   const images = [];
-  for (let i = 0; i < urls.length; i += 1) {
+
+  for (let i = 0; i < n; i += 1) {
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${aiPrompt}?width=${width}&height=${height}&model=flux&nologo=true&seed=${Date.now() + i}`;
+    const flickrUrl = `https://loremflickr.com/${width}/${height}/${keyword}?lock=${Date.now() + i}`;
+
     try {
-      const response = await fetch(urls[i]);
-      if (!response.ok) throw new Error('pollinations failed');
-      const contentType = response.headers.get('content-type') || 'image/png';
-      const buffer = Buffer.from(await response.arrayBuffer()).toString('base64');
-      images.push(`data:${contentType};base64,${buffer}`);
+      images.push(await fetchImageAsDataUrl(pollinationsUrl));
+      continue;
     } catch {
-      images.push(fallbackSvgDataUrl(size, `Variant ${i + 1}`));
+      // try next provider
     }
+
+    try {
+      images.push(await fetchImageAsDataUrl(flickrUrl));
+      continue;
+    } catch {
+      // fallback to generated svg
+    }
+
+    images.push(fallbackSvgDataUrl(size, `Variant ${i + 1}`));
   }
 
-  return { images, provider: 'pollinations' };
+  return { images, provider: 'fallback-mixed' };
 }
 
 exports.handler = async (event) => {
@@ -77,16 +103,10 @@ exports.handler = async (event) => {
 
     if (apiKey) {
       try {
-        const openaiResult = await generateWithOpenAI({
-          prompt: finalPrompt,
-          size: finalSize,
-          n: finalN,
-          apiKey
-        });
-
+        const openaiResult = await generateWithOpenAI({ prompt: finalPrompt, size: finalSize, n: finalN, apiKey });
         return { statusCode: 200, body: JSON.stringify(openaiResult) };
       } catch (openaiError) {
-        const fallback = await generateWithPollinations({ prompt: finalPrompt, size: finalSize, n: finalN });
+        const fallback = await generateWithFallbackProviders({ prompt: finalPrompt, size: finalSize, n: finalN });
         return {
           statusCode: 200,
           body: JSON.stringify({ ...fallback, warning: `OpenAI failed, fallback used: ${openaiError.message}` })
@@ -94,10 +114,10 @@ exports.handler = async (event) => {
       }
     }
 
-    const fallback = await generateWithPollinations({ prompt: finalPrompt, size: finalSize, n: finalN });
+    const fallback = await generateWithFallbackProviders({ prompt: finalPrompt, size: finalSize, n: finalN });
     return {
       statusCode: 200,
-      body: JSON.stringify({ ...fallback, warning: 'OPENAI_API_KEY not configured. Using free fallback provider.' })
+      body: JSON.stringify({ ...fallback, warning: 'OPENAI_API_KEY not configured. Using fallback providers.' })
     };
   } catch (error) {
     return { statusCode: 500, body: JSON.stringify({ error: error.message || 'Unexpected server error.' }) };

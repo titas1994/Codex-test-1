@@ -107,7 +107,7 @@ async function generate() {
     render();
 
     statusEl.textContent = json.warning
-      ? `${json.warning} Generated ${images.length} thumbnail(s).`
+      ? `Generated ${images.length} thumbnail(s) in fallback mode.`
       : `Generated ${images.length} thumbnail(s) with ${activeProvider}.`;
   } catch (error) {
     statusEl.textContent = `Error: ${error.message}`;

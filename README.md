@@ -54,4 +54,4 @@ netlify dev
 
 ### Fallback behavior
 
-If `OPENAI_API_KEY` is not configured (or OpenAI fails), the function falls back to a free provider so users can still generate results.
+If `OPENAI_API_KEY` is not configured (or OpenAI fails), the function falls back to free providers and returns image data URLs so thumbnails still render in the UI.
