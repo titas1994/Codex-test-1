@@ -11,6 +11,7 @@ const statusEl = document.getElementById('status');
 
 let selectedIndex = 0;
 let images = [];
+let activeProvider = '';
 
 function buildPrompt() {
   const goal = promptInput.value.trim();
@@ -29,6 +30,7 @@ async function convertDataUrl(dataUrl, format) {
 
   const img = await new Promise((resolve, reject) => {
     const i = new Image();
+    i.crossOrigin = 'anonymous';
     i.onload = () => resolve(i);
     i.onerror = reject;
     i.src = dataUrl;
@@ -89,9 +91,15 @@ async function generate() {
     }
 
     images = json.images || [];
+    activeProvider = json.provider || 'provider';
     selectedIndex = 0;
     render();
-    statusEl.textContent = `Generated ${images.length} thumbnail(s).`;
+
+    if (json.warning) {
+      statusEl.textContent = `${json.warning} Generated ${images.length} thumbnail(s).`;
+    } else {
+      statusEl.textContent = `Generated ${images.length} thumbnail(s) with ${activeProvider}.`;
+    }
   } catch (error) {
     statusEl.textContent = `Error: ${error.message}`;
   } finally {
@@ -102,11 +110,18 @@ async function generate() {
 downloadSelectedBtn.addEventListener('click', async () => {
   if (!images.length) return;
   const fmt = exportFormat.value;
-  const output = await convertDataUrl(images[selectedIndex], fmt);
   const ext = fmt === 'jpeg' ? 'jpg' : fmt;
   const a = document.createElement('a');
-  a.href = output;
+
+  try {
+    const output = await convertDataUrl(images[selectedIndex], fmt);
+    a.href = output;
+  } catch {
+    a.href = images[selectedIndex];
+  }
+
   a.download = `thumbnail-${selectedIndex + 1}.${ext}`;
+  a.target = '_blank';
   a.click();
 });
 
@@ -114,11 +129,19 @@ downloadAllBtn.addEventListener('click', async () => {
   if (!images.length) return;
   const fmt = exportFormat.value;
   const ext = fmt === 'jpeg' ? 'jpg' : fmt;
+
   for (let i = 0; i < images.length; i += 1) {
-    const output = await convertDataUrl(images[i], fmt);
     const a = document.createElement('a');
-    a.href = output;
+
+    try {
+      const output = await convertDataUrl(images[i], fmt);
+      a.href = output;
+    } catch {
+      a.href = images[i];
+    }
+
     a.download = `thumbnail-${i + 1}.${ext}`;
+    a.target = '_blank';
     a.click();
   }
 });

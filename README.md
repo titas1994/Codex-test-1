@@ -3,7 +3,7 @@
 This is a real-world static + serverless thumbnail generator:
 - Frontend: static web app
 - Backend: Netlify Function (`/.netlify/functions/generate-thumbnail`)
-- AI engine: OpenAI Images API (`gpt-image-1`)
+- AI engine: OpenAI Images API (`gpt-image-1`) with automatic free fallback provider when key is missing
 
 ## What works now
 
@@ -23,7 +23,7 @@ Set this env var in Netlify:
 
 - `OPENAI_API_KEY`
 
-Without it, generation will return a clear server error.
+If missing, app automatically uses fallback generation URLs so the site still works.
 
 ## Local development
 
@@ -50,3 +50,8 @@ netlify dev
 
 - This implementation is production-oriented compared with pure client-side mock generation.
 - Keep API keys only in server-side env vars (never in frontend JS).
+
+
+### Fallback behavior
+
+If `OPENAI_API_KEY` is not configured (or OpenAI fails), the function falls back to a free provider so users can still generate results.
