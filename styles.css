@@ -82,7 +82,7 @@ button.secondary {
 }
 .item img {
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: var(--thumb-ratio, 16 / 9);
   object-fit: cover;
   display: block;
 }

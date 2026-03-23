@@ -25,6 +25,11 @@ function buildPrompt() {
   ].join(' ');
 }
 
+function aspectFromSize(size) {
+  const [w, h] = size.split('x').map(Number);
+  return `${w} / ${h}`;
+}
+
 async function convertDataUrl(dataUrl, format) {
   if (format === 'png') return dataUrl;
 
@@ -47,6 +52,8 @@ async function convertDataUrl(dataUrl, format) {
 
 function render() {
   gallery.innerHTML = '';
+  gallery.style.setProperty('--thumb-ratio', aspectFromSize(platformSize.value));
+
   images.forEach((url, idx) => {
     const card = document.createElement('article');
     card.className = 'item';
@@ -57,6 +64,12 @@ function render() {
         <input type="radio" name="thumb" ${idx === selectedIndex ? 'checked' : ''} />
       </div>
     `;
+
+    const imgEl = card.querySelector('img');
+    imgEl.onerror = () => {
+      imgEl.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iIzEyMjI0ZCIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmaWxsPSIjZmZmIiBmb250LXNpemU9IjQ4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiPkltYWdlIGZhaWxlZCwgdHJ5IGFnYWluPC90ZXh0Pjwvc3ZnPg==';
+    };
+
     card.querySelector('input').addEventListener('change', () => {
       selectedIndex = idx;
     });
@@ -86,20 +99,16 @@ async function generate() {
     });
 
     const json = await res.json();
-    if (!res.ok) {
-      throw new Error(json.error || 'Generation failed.');
-    }
+    if (!res.ok) throw new Error(json.error || 'Generation failed.');
 
     images = json.images || [];
     activeProvider = json.provider || 'provider';
     selectedIndex = 0;
     render();
 
-    if (json.warning) {
-      statusEl.textContent = `${json.warning} Generated ${images.length} thumbnail(s).`;
-    } else {
-      statusEl.textContent = `Generated ${images.length} thumbnail(s) with ${activeProvider}.`;
-    }
+    statusEl.textContent = json.warning
+      ? `${json.warning} Generated ${images.length} thumbnail(s).`
+      : `Generated ${images.length} thumbnail(s) with ${activeProvider}.`;
   } catch (error) {
     statusEl.textContent = `Error: ${error.message}`;
   } finally {
@@ -114,8 +123,7 @@ downloadSelectedBtn.addEventListener('click', async () => {
   const a = document.createElement('a');
 
   try {
-    const output = await convertDataUrl(images[selectedIndex], fmt);
-    a.href = output;
+    a.href = await convertDataUrl(images[selectedIndex], fmt);
   } catch {
     a.href = images[selectedIndex];
   }
@@ -132,14 +140,11 @@ downloadAllBtn.addEventListener('click', async () => {
 
   for (let i = 0; i < images.length; i += 1) {
     const a = document.createElement('a');
-
     try {
-      const output = await convertDataUrl(images[i], fmt);
-      a.href = output;
+      a.href = await convertDataUrl(images[i], fmt);
     } catch {
       a.href = images[i];
     }
-
     a.download = `thumbnail-${i + 1}.${ext}`;
     a.target = '_blank';
     a.click();
