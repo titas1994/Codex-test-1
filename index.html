@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Thumbnail Studio</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="layout">
+      <section class="card form-card">
+        <h1>AI Thumbnail Studio</h1>
+        <p>Generate production-ready thumbnail concepts using a real AI backend. No login required.</p>
+
+        <label>
+          Thumbnail goal
+          <input id="promptInput" type="text" placeholder="Example: Beginner to pro Claude AI tutorial" />
+        </label>
+
+        <div class="row">
+          <label>
+            Style
+            <select id="stylePreset">
+              <option value="high contrast YouTube thumbnail">YouTube High CTR</option>
+              <option value="cinematic dramatic lighting">Cinematic</option>
+              <option value="gaming neon style">Gaming</option>
+              <option value="clean modern minimal">Minimal</option>
+            </select>
+          </label>
+
+          <label>
+            Platform
+            <select id="platformSize">
+              <option value="1280x720">YouTube (1280×720)</option>
+              <option value="1080x1920">YouTube Shorts / TikTok (1080×1920)</option>
+              <option value="1080x1350">Instagram (1080×1350)</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Variations
+            <select id="variationCount">
+              <option>1</option><option>2</option><option selected>3</option><option>4</option>
+            </select>
+          </label>
+          <label>
+            Export
+            <select id="exportFormat">
+              <option value="png">PNG</option>
+              <option value="jpeg">JPG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </label>
+        </div>
+
+        <button id="generateBtn" type="button">Generate thumbnails</button>
+        <p id="status" class="status">Ready.</p>
+      </section>
+
+      <section class="card output-card">
+        <div class="toolbar">
+          <h2>Generated Variations</h2>
+          <div>
+            <button id="downloadSelectedBtn" type="button" class="secondary">Download selected</button>
+            <button id="downloadAllBtn" type="button" class="secondary">Download all</button>
+          </div>
+        </div>
+        <div id="gallery" class="gallery"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
